@@ -18,4 +18,4 @@ ENV PATH="/app/.venv/bin:$PATH"
 USER nonroot
 WORKDIR /app
 # Railway sets $PORT. The worker service overrides CMD with `procrastinate --app=worker.app worker`.
-CMD ["sh", "-c", "alembic upgrade head && fastapi run app/main.py --host :: --port ${PORT:-8000}"]
+CMD ["sh", "-c", "alembic upgrade head && fastapi run app/main.py --host 0.0.0.0 --port ${PORT:-8000}"]
