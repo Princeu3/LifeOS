@@ -1,11 +1,11 @@
-# syntax=docker/dockerfile:1
 # ---- builder ----
 FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS builder
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_NO_DEV=1 UV_PYTHON_DOWNLOADS=0
 WORKDIR /app
-RUN --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --locked --no-install-project
+# Install deps first (layer-cached unless uv.lock/pyproject change), without the project.
+COPY uv.lock pyproject.toml ./
+RUN uv sync --locked --no-install-project
+# Then the app itself.
 COPY . /app
 RUN uv sync --locked
 
