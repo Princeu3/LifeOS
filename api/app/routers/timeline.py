@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..auth import make_media_token, require_auth
 from ..db import get_db
 from ..models import (
     BristolLog,
@@ -19,7 +20,7 @@ from ..models import (
 )
 from ..schemas import TimelineDetailOut, TimelineEntryOut
 
-router = APIRouter(prefix="/timeline", tags=["timeline"])
+router = APIRouter(prefix="/timeline", tags=["timeline"], dependencies=[Depends(require_auth)])
 
 # Single-user app: fixed owner id until passkey auth lands.
 OWNER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
@@ -37,14 +38,20 @@ _TABLE_MODEL = {
 
 
 @router.get("", response_model=list[TimelineEntryOut])
-async def timeline(limit: int = 100, db: AsyncSession = Depends(get_db)) -> list[TimelineEvent]:
+async def timeline(limit: int = 100, db: AsyncSession = Depends(get_db)) -> list[TimelineEntryOut]:
     result = await db.execute(
         select(TimelineEvent)
         .where(TimelineEvent.user_id == OWNER_ID)
         .order_by(TimelineEvent.occurred_at.desc())
         .limit(min(limit, 500))
     )
-    return list(result.scalars().all())
+    out: list[TimelineEntryOut] = []
+    for e in result.scalars().all():
+        entry = TimelineEntryOut.model_validate(e)
+        if e.ref_table == "photos" and e.ref_id:
+            entry.media_token = make_media_token(e.ref_id)  # short-lived <img> token
+        out.append(entry)
+    return out
 
 
 @router.get("/{event_id}", response_model=TimelineDetailOut)
@@ -61,4 +68,6 @@ async def timeline_detail(event_id: uuid.UUID, db: AsyncSession = Depends(get_db
             domain_row = {c.name: getattr(row, c.name) for c in row.__table__.columns}
     detail = TimelineDetailOut.model_validate(event)
     detail.domain_row = domain_row
+    if event.ref_table == "photos" and event.ref_id:
+        detail.media_token = make_media_token(event.ref_id)
     return detail

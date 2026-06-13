@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Auth from "./Auth";
 import {
   enqueueCapture,
   fetchTimeline,
@@ -10,6 +11,8 @@ import {
   type PhotoType,
   type TimelineEntry,
 } from "./lib/api";
+import { logout } from "./lib/auth";
+import { getToken } from "./lib/http";
 
 const DOMAIN: Record<string, { emoji: string; label: string }> = {
   sleep: { emoji: "😴", label: "Sleep" },
@@ -70,6 +73,12 @@ function structuredPairs(e: TimelineEntry): [string, string][] {
 
 export default function App() {
   const qc = useQueryClient();
+  const [authed, setAuthed] = useState(() => !!getToken());
+  useEffect(() => {
+    const onUnauth = () => setAuthed(false); // a 401 from any request drops us to the gate
+    window.addEventListener("lifeos:unauthorized", onUnauth);
+    return () => window.removeEventListener("lifeos:unauthorized", onUnauth);
+  }, []);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -80,7 +89,22 @@ export default function App() {
   const [excludeAi, setExcludeAi] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
-  const { data: entries = [], isLoading } = useQuery({ queryKey: ["timeline"], queryFn: fetchTimeline });
+  const { data: entries = [], isLoading } = useQuery({
+    queryKey: ["timeline"],
+    queryFn: fetchTimeline,
+    enabled: authed,
+  });
+
+  if (!authed)
+    return (
+      <Auth
+        onAuthed={() => {
+          setAuthed(true);
+          void qc.invalidateQueries({ queryKey: ["timeline"] });
+          void syncQueue();
+        }}
+      />
+    );
 
   async function log() {
     const t = text.trim();
@@ -138,9 +162,20 @@ export default function App() {
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100">
       <main className="mx-auto max-w-xl px-4 py-8">
-        <header className="mb-6">
-          <h1 className="text-2xl font-semibold tracking-tight">LifeOS</h1>
-          <p className="text-sm text-neutral-400">Log anything — AI files it onto your timeline.</p>
+        <header className="mb-6 flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">LifeOS</h1>
+            <p className="text-sm text-neutral-400">Log anything — AI files it onto your timeline.</p>
+          </div>
+          <button
+            onClick={() => {
+              logout();
+              setAuthed(false);
+            }}
+            className="text-xs text-neutral-500 hover:text-neutral-300"
+          >
+            Lock
+          </button>
         </header>
 
         <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-3 focus-within:border-neutral-700">
@@ -224,7 +259,7 @@ export default function App() {
                           {isPhoto && (
                             <div className="mt-2 flex gap-3">
                               <img
-                                src={photoImageUrl(e.ref_id!)}
+                                src={photoImageUrl(e.ref_id!, e.media_token)}
                                 alt={`${e.domain} photo`}
                                 loading="lazy"
                                 className="h-24 w-24 shrink-0 rounded-lg border border-neutral-800 object-cover"

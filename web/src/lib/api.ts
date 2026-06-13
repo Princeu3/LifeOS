@@ -1,12 +1,11 @@
 import { db } from "./db";
+import { API, authedFetch } from "./http";
 import { downscaleImage } from "./image";
 
-export const API = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
-
-// Write to the local queue first (works offline), then attempt sync.
 const newToken = () =>
   globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
+// Write to the local queue first (works offline), then attempt sync.
 export async function enqueueCapture(text: string, domainHint?: string): Promise<void> {
   const now = new Date().toISOString();
   await db.captures.add({
@@ -27,12 +26,9 @@ export async function syncQueue(): Promise<void> {
   const pending = await db.captures.where("synced").equals(0).toArray();
   for (const c of pending) {
     try {
-      const res = await fetch(`${API}/capture`, {
+      const res = await authedFetch("/capture", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Idempotency-Key": c.client_token, // dedupes retries of this same queued capture
-        },
+        headers: { "Content-Type": "application/json", "Idempotency-Key": c.client_token },
         body: JSON.stringify({
           text: c.text,
           occurred_at: c.occurred_at,
@@ -43,7 +39,7 @@ export async function syncQueue(): Promise<void> {
       });
       if (res.ok && c.id != null) await db.captures.update(c.id, { synced: 1 });
     } catch {
-      // offline / transient — will retry on next sync
+      // offline / transient / unauthorized — will retry on next sync (or after re-auth)
     }
   }
 }
@@ -61,10 +57,11 @@ export interface TimelineEntry {
   ref_table?: string | null;
   ref_id?: string | null;
   media?: { bucket_key: string; photo_id?: string }[];
+  media_token?: string | null;
 }
 
 export async function fetchTimeline(): Promise<TimelineEntry[]> {
-  const r = await fetch(`${API}/timeline`);
+  const r = await authedFetch("/timeline");
   if (!r.ok) throw new Error(`timeline ${r.status}`);
   return r.json();
 }
@@ -83,8 +80,9 @@ export interface PhotoOut {
   event_id: string | null;
 }
 
-// Built so the client can fetch (and, for sensitive media, decrypt-on-read via) the API proxy.
-export const photoImageUrl = (refId: string) => `${API}/photos/${refId}/image`;
+// <img> can't send an Authorization header, so it carries a short-lived per-photo media token.
+export const photoImageUrl = (refId: string, mediaToken?: string | null) =>
+  `${API}/photos/${refId}/image${mediaToken ? `?t=${encodeURIComponent(mediaToken)}` : ""}`;
 
 export async function uploadPhoto(
   file: File,
@@ -100,7 +98,8 @@ export async function uploadPhoto(
   if (opts.sensitive != null) form.append("sensitive", String(opts.sensitive));
   if (opts.excludeFromCloudAi != null)
     form.append("exclude_from_cloud_ai", String(opts.excludeFromCloudAi));
-  const r = await fetch(`${API}/photos`, { method: "POST", body: form });
+  // authedFetch adds Authorization; do NOT set Content-Type — the browser sets the multipart boundary.
+  const r = await authedFetch("/photos", { method: "POST", body: form });
   if (!r.ok) throw new Error(`photo upload ${r.status}`);
   return r.json();
 }

@@ -18,11 +18,12 @@ import re
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query, Response, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import storage
+from ..auth import image_auth_ok, require_auth
 from ..db import get_db
 from ..models import Domain, Photo, Source, TimelineEvent
 from ..schemas import PhotoOut
@@ -82,6 +83,7 @@ async def upload_photo(
     exclude_from_cloud_ai: bool = Form(False),
     occurred_at: str | None = Form(None),
     prev_photo_id: str | None = Form(None),
+    _: uuid.UUID = Depends(require_auth),
     db: AsyncSession = Depends(get_db),
 ) -> PhotoOut:
     if photo_type not in PHOTO_TYPES:
@@ -159,7 +161,11 @@ async def upload_photo(
 
 
 @router.get("/{photo_id}", response_model=PhotoOut)
-async def get_photo(photo_id: uuid.UUID, db: AsyncSession = Depends(get_db)) -> Photo:
+async def get_photo(
+    photo_id: uuid.UUID,
+    _: uuid.UUID = Depends(require_auth),
+    db: AsyncSession = Depends(get_db),
+) -> Photo:
     photo = await db.get(Photo, photo_id)
     if not photo:
         raise HTTPException(404, "photo not found")
@@ -167,7 +173,15 @@ async def get_photo(photo_id: uuid.UUID, db: AsyncSession = Depends(get_db)) -> 
 
 
 @router.get("/{photo_id}/image")
-async def get_photo_image(photo_id: uuid.UUID, db: AsyncSession = Depends(get_db)) -> Response:
+async def get_photo_image(
+    photo_id: uuid.UUID,
+    t: str | None = Query(default=None),  # short-lived per-photo media token (for <img src>)
+    authorization: str | None = Header(default=None),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    # <img> can't send Authorization; accept a scoped media token via ?t= OR a bearer header.
+    if not image_auth_ok(t, authorization, photo_id):
+        raise HTTPException(401, "authentication required")
     photo = await db.get(Photo, photo_id)
     if not photo:
         raise HTTPException(404, "photo not found")

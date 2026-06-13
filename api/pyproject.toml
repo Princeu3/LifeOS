@@ -17,10 +17,12 @@ dependencies = [
   "boto3>=1.35",         # Cloudflare R2 (S3-compatible)
   "cryptography>=43",    # AES-256-GCM for sensitive media
   "procrastinate>=3.8",  # shared enqueue helpers; the worker service runs it
+  "webauthn>=2.5,<3",    # py_webauthn — passkey (WebAuthn/FIDO2) register + auth
+  "itsdangerous>=2.2",   # signed session + challenge-state tokens
 ]
 
 [dependency-groups]
-dev = ["pytest", "ruff", "httpx"]
+dev = ["pytest", "ruff", "httpx", "soft-webauthn"]
 
 [tool.ruff]
 target-version = "py313"

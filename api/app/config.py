@@ -33,6 +33,15 @@ class Settings(BaseSettings):
     s3_bucket: str = "lifeos-media"
     s3_region: str = "auto"
 
+    # --- auth (passkeys / WebAuthn) — see app/auth.py, docs/research grounding ---
+    auth_secret: str = "dev-insecure-change-me"  # signs session/state/media tokens (SET in prod)
+    auth_bootstrap_token: str | None = None       # gates the FIRST passkey registration (set in prod)
+    webauthn_rp_id: str | None = None             # default: hostname of frontend_origin (e.g. web-...up.railway.app)
+    webauthn_rp_name: str = "LifeOS"
+    webauthn_origin: str | None = None            # default: frontend_origin (the https URL the ceremony runs on)
+    session_ttl_days: int = 7
+    media_token_ttl_seconds: int = 900            # short-lived per-photo <img> token
+
     # Withings
     withings_client_id: str | None = None
     withings_client_secret: str | None = None

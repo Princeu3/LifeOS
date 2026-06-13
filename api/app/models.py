@@ -198,3 +198,30 @@ class CareRoutineRun(Base):
     completed: Mapped[bool] = mapped_column(default=True)
     exceptions: Mapped[list | None] = mapped_column(JSONB)
     notes: Mapped[str | None] = mapped_column(Text)
+
+
+# --- auth (passkeys / WebAuthn) ---
+
+
+class Credential(Base):
+    """A registered passkey (WebAuthn credential). Single-user owns up to 2."""
+
+    __tablename__ = "credentials"
+    id: Mapped[uuid.UUID] = _pk()
+    credential_id: Mapped[str] = mapped_column(String(512), unique=True, index=True)  # base64url
+    public_key: Mapped[str] = mapped_column(Text)  # base64url COSE public key
+    sign_count: Mapped[int] = mapped_column(Integer, default=0)
+    transports: Mapped[list | None] = mapped_column(JSONB)
+    name: Mapped[str | None] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AuthConfig(Base):
+    """Owner-level auth config — single row (stable WebAuthn user handle + recovery hash)."""
+
+    __tablename__ = "auth_config"
+    id: Mapped[uuid.UUID] = _pk()
+    webauthn_user_id: Mapped[str] = mapped_column(String(128))  # base64url 64-byte user handle
+    recovery_code_hash: Mapped[str | None] = mapped_column(String(128))  # sha256 of high-entropy code
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

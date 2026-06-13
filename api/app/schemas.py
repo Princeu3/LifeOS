@@ -43,6 +43,29 @@ class TimelineEntryOut(BaseModel):
     ref_table: str | None = None
     ref_id: uuid.UUID | None = None  # e.g. photos.id -> client builds /photos/{ref_id}/image
     media: list = []
+    media_token: str | None = None  # short-lived per-photo token for the <img> src (?t=)
+
+
+# --- auth (passkeys) ---
+
+
+class RegisterOptionsIn(BaseModel):
+    name: str | None = None
+
+
+class RegisterVerifyIn(BaseModel):
+    response: dict  # @simplewebauthn/browser RegistrationResponseJSON
+    state: str
+    name: str | None = None
+
+
+class LoginVerifyIn(BaseModel):
+    response: dict  # AuthenticationResponseJSON
+    state: str
+
+
+class RecoveryIn(BaseModel):
+    code: str
 
 
 class TimelineDetailOut(TimelineEntryOut):

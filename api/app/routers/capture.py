@@ -14,12 +14,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..ai import parse_capture
+from ..auth import require_auth
 from ..db import get_db
 from ..models import TimelineEvent
 from ..normalize import normalize
 from ..schemas import CaptureRequest, CaptureResponse, ParsedEntry
 
-router = APIRouter(prefix="/capture", tags=["capture"])
+router = APIRouter(prefix="/capture", tags=["capture"], dependencies=[Depends(require_auth)])
 
 # Single-user app: fixed owner id until passkey auth lands.
 OWNER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
