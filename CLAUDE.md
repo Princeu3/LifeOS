@@ -2,7 +2,7 @@
 
 LifeOS is a **single-user, web-first PWA** for daily life-tracking + AI analysis, **self-hosted on Railway**. Owner: Prince. It records sleep, nutrition, hygiene/skincare/hair/body care, body/face/hair/nail photos, egestion, gym, wardrobe, books, work hours, mood, supplements, symptoms, and context (weather/location) — then surfaces cross-domain insights.
 
-> Read `docs/DECISIONS.md`, `docs/ARCHITECTURE.md`, and `docs/FEATURE-CATALOG.md` before non-trivial work. `docs/PHASES.md` tracks status.
+> Read `docs/DECISIONS.md`, `docs/ARCHITECTURE.md`, `docs/FEATURE-CATALOG.md` before non-trivial work. `docs/PHASES.md` = status · `docs/DEPLOY.md` = live URLs + Railway redeploy commands + gotchas. **The full stack is deployed & live** (web + api on Railway, Postgres 18+pgvector, R2).
 
 ## Golden rules
 1. **Single-user.** No multi-tenant abstractions, billing, or org logic. Optimize for one person.
