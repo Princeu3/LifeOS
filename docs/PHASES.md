@@ -14,8 +14,9 @@ Decisions, full feature catalog, and grounding (reader3/EPUB, landscape, Withing
 - ✅ **Railway `LifeOS` project + Postgres 18.4 provisioned**; **Cloudflare R2 `lifeos-media` wired + verified**.
 - ✅ **Alembic `0001` migration applied** — `pgvector` extension + `timeline_events` spine + 11 domain tables (sleep, food, body_metrics, photos, mood, bristol, urine, products, care_routines, care_routine_runs).
 - ✅ **Capture → DSPy/OpenRouter parsing verified end-to-end** (freeform → routed structured entry → persisted). Parsed `structured` stored on each event.
-- 🔄 Per-domain endpoints + normalize `structured` into domain tables (sleep · nutrition · mood · egestion · care).
-- ⬜ Timeline **read API** + daily **timeline UI** + capture screen wired to the live API.
+- ✅ **Normalize `structured` → typed domain rows** (`app/normalize.py`): capture now projects the parse into SleepLog/FoodLog/MoodLog/Bristol|UrineLog/CareRoutineRun and back-links via `event.ref_table/ref_id` (lossless — full parse stays on `event.structured`). Lenient Pydantic coercion (AliasChoices + `mode=before` validators, never raises) + range clamping. Parser hardened: `now` input for relative-time→ISO, per-domain key hints, `JSONAdapter`. `GET /timeline/{event_id}` hydrates the typed row; web entries expand to show structured fields.
+- ✅ Timeline **read API** + daily **timeline UI** + capture screen wired to the live API.
+- ⬜ **Idempotency key on capture** (offline-queue retries can double-write — grounded follow-up; needs a client dedup key + UNIQUE index).
 - ⬜ Passkey auth (2 passkeys + recovery code).
 - ⬜ Seed care products/routines from RevampPrince (local-only seed).
 - ✅ **Photo capture vertical slice** — upload face/skin/body/nails/hair → R2 (AES-256-GCM on sensitive; `0002` migration adds `enc_nonce`/`content_type`) → **ZDR Claude vision** observations (`app/vision.py`, `exclude_from_cloud_ai` respected) → `photo` TimelineEvent → thumbnail + observations on the timeline. Client downsamples to ≤2048px pre-upload. Routes: `POST /photos`, `GET /photos/{id}`, `GET /photos/{id}/image` (decrypt-on-read proxy). ⬜ ghost-overlay (prev_photo_id is stored, alignment UI later).

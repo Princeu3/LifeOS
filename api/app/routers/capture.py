@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..ai import parse_capture
 from ..db import get_db
 from ..models import TimelineEvent
+from ..normalize import normalize
 from ..schemas import CaptureRequest, CaptureResponse
 
 router = APIRouter(prefix="/capture", tags=["capture"])
@@ -37,6 +38,17 @@ async def capture(req: CaptureRequest, db: AsyncSession = Depends(get_db)) -> Ca
         confidence=parsed.confidence,
     )
     db.add(event)
+
+    # Project the parse into a typed domain row and back-link it (timeline-spine ref_table/ref_id).
+    # The full parse is still retained on event.structured, so this is lossless either way.
+    norm = normalize(parsed.domain, parsed.structured)
+    if norm:
+        ref_table, row = norm
+        db.add(row)
+        await db.flush()  # assign row.id + event.id before linking
+        event.ref_table = ref_table
+        event.ref_id = row.id
+
     await db.commit()
     await db.refresh(event)
     return CaptureResponse(event_id=event.id, parsed=parsed)

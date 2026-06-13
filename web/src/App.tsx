@@ -59,6 +59,15 @@ function observationsOf(e: TimelineEntry): string[] {
   return Array.isArray(a?.observations) ? (a!.observations as string[]).slice(0, 3) : [];
 }
 
+// Structured fields to reveal on expand (the parse the API filed into a domain table).
+function structuredPairs(e: TimelineEntry): [string, string][] {
+  const s = e.structured ?? {};
+  return Object.entries(s)
+    .filter(([k]) => k !== "analysis" && k !== "prompt_version")
+    .map(([k, v]) => [k, typeof v === "object" && v !== null ? JSON.stringify(v) : String(v)] as [string, string])
+    .filter(([, v]) => v && v !== "null" && v !== "{}" && v !== "[]");
+}
+
 export default function App() {
   const qc = useQueryClient();
   const [text, setText] = useState("");
@@ -70,6 +79,7 @@ export default function App() {
   const [sensitive, setSensitive] = useState(true);
   const [excludeAi, setExcludeAi] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [open, setOpen] = useState<string | null>(null);
   const { data: entries = [], isLoading } = useQuery({ queryKey: ["timeline"], queryFn: fetchTimeline });
 
   async function log() {
@@ -190,39 +200,61 @@ export default function App() {
                   const low = e.confidence != null && e.confidence < 0.6;
                   const isPhoto = e.domain === "photo" && e.ref_id;
                   const obs = isPhoto ? observationsOf(e) : [];
+                  const pairs = structuredPairs(e);
+                  const isOpen = open === e.id;
                   return (
                     <li
                       key={e.id}
-                      className="flex gap-3 rounded-xl border border-neutral-800/70 bg-neutral-900/40 p-3"
+                      className="overflow-hidden rounded-xl border border-neutral-800/70 bg-neutral-900/40"
                     >
-                      <div className="text-xl leading-none">{d.emoji}</div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="rounded-full bg-neutral-800 px-2 py-0.5 text-[11px] text-neutral-300">
-                            {d.label}
-                          </span>
-                          <span className="text-[11px] text-neutral-500">{timeLabel(e.occurred_at)}</span>
-                          {low && <span className="text-[11px] text-amber-400">needs confirm</span>}
-                        </div>
-                        <p className="mt-1 text-sm text-neutral-200">{e.summary}</p>
-                        {isPhoto && (
-                          <div className="mt-2 flex gap-3">
-                            <img
-                              src={photoImageUrl(e.ref_id!)}
-                              alt={`${e.domain} photo`}
-                              loading="lazy"
-                              className="h-24 w-24 shrink-0 rounded-lg border border-neutral-800 object-cover"
-                            />
-                            {obs.length > 0 && (
-                              <ul className="min-w-0 list-disc space-y-0.5 pl-4 text-xs text-neutral-400">
-                                {obs.map((o, i) => (
-                                  <li key={i}>{o}</li>
-                                ))}
-                              </ul>
-                            )}
+                      <div
+                        className={`flex gap-3 p-3 ${pairs.length ? "cursor-pointer" : ""}`}
+                        onClick={() => pairs.length && setOpen(isOpen ? null : e.id)}
+                      >
+                        <div className="text-xl leading-none">{d.emoji}</div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="rounded-full bg-neutral-800 px-2 py-0.5 text-[11px] text-neutral-300">
+                              {d.label}
+                            </span>
+                            <span className="text-[11px] text-neutral-500">{timeLabel(e.occurred_at)}</span>
+                            {low && <span className="text-[11px] text-amber-400">needs confirm</span>}
                           </div>
+                          <p className="mt-1 text-sm text-neutral-200">{e.summary}</p>
+                          {isPhoto && (
+                            <div className="mt-2 flex gap-3">
+                              <img
+                                src={photoImageUrl(e.ref_id!)}
+                                alt={`${e.domain} photo`}
+                                loading="lazy"
+                                className="h-24 w-24 shrink-0 rounded-lg border border-neutral-800 object-cover"
+                              />
+                              {obs.length > 0 && (
+                                <ul className="min-w-0 list-disc space-y-0.5 pl-4 text-xs text-neutral-400">
+                                  {obs.map((o, i) => (
+                                    <li key={i}>{o}</li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        {pairs.length > 0 && (
+                          <span className="select-none text-xs text-neutral-600">{isOpen ? "▲" : "▼"}</span>
                         )}
                       </div>
+                      {isOpen && pairs.length > 0 && (
+                        <dl className="border-t border-neutral-800/70 px-3 py-2 text-xs">
+                          {pairs.map(([k, v]) => (
+                            <div key={k} className="flex gap-2 py-0.5">
+                              <dt className="min-w-24 shrink-0 capitalize text-neutral-500">
+                                {k.replace(/_/g, " ")}
+                              </dt>
+                              <dd className="break-all text-neutral-300">{v}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      )}
                     </li>
                   );
                 })}

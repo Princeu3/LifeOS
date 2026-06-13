@@ -43,6 +43,13 @@ class TimelineEntryOut(BaseModel):
     media: list = []
 
 
+class TimelineDetailOut(TimelineEntryOut):
+    """A single event plus its normalized domain-table row (typed projection), if any."""
+
+    logged_at: datetime | None = None
+    domain_row: dict | None = None
+
+
 class PhotoOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
