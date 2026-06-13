@@ -12,6 +12,7 @@ class CaptureRequest(BaseModel):
     domain_hint: Domain | None = None  # optional; AI infers when absent
     source: Source = Source.manual
     media_keys: list[str] = []
+    # Idempotency token travels in the `Idempotency-Key` HTTP header (Stripe/IETF style), not here.
 
 
 class ParsedEntry(BaseModel):
@@ -25,6 +26,7 @@ class ParsedEntry(BaseModel):
 class CaptureResponse(BaseModel):
     event_id: uuid.UUID
     parsed: ParsedEntry
+    deduplicated: bool = False  # True when this client_token was already captured (replay)
 
 
 class TimelineEntryOut(BaseModel):

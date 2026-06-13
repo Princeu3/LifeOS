@@ -4,6 +4,9 @@ import { downscaleImage } from "./image";
 export const API = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 // Write to the local queue first (works offline), then attempt sync.
+const newToken = () =>
+  globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
 export async function enqueueCapture(text: string, domainHint?: string): Promise<void> {
   const now = new Date().toISOString();
   await db.captures.add({
@@ -12,6 +15,7 @@ export async function enqueueCapture(text: string, domainHint?: string): Promise
     domain_hint: domainHint,
     source: "manual",
     media_keys: [],
+    client_token: newToken(), // generated once; reused on every retry so the API dedupes
     created_at: now,
     synced: 0,
   });
@@ -25,7 +29,10 @@ export async function syncQueue(): Promise<void> {
     try {
       const res = await fetch(`${API}/capture`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": c.client_token, // dedupes retries of this same queued capture
+        },
         body: JSON.stringify({
           text: c.text,
           occurred_at: c.occurred_at,

@@ -14,7 +14,7 @@ import uuid
 from datetime import datetime
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import DateTime, Enum, Float, Integer, String, Text, func
+from sqlalchemy import DateTime, Enum, Float, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -56,9 +56,12 @@ class Source(str, enum.Enum):
 
 class TimelineEvent(Base):
     __tablename__ = "timeline_events"
+    # Idempotency: a capture may carry a client-generated token so offline-queue retries dedupe.
+    __table_args__ = (UniqueConstraint("user_id", "client_token", name="uq_timeline_user_token"),)
 
     id: Mapped[uuid.UUID] = _pk()
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
+    client_token: Mapped[str | None] = mapped_column(String(64))
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     logged_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     domain: Mapped[Domain] = mapped_column(Enum(Domain, name="domain"), index=True)

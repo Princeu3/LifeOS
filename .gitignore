@@ -17,3 +17,6 @@ private/
 
 # TS incremental build info
 *.tsbuildinfo
+
+# Stray MCP config written into cwd by agent-reach's mcporter tool during research
+**/mcporter.json

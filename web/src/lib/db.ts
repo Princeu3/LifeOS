@@ -8,6 +8,7 @@ export interface QueuedCapture {
   domain_hint?: string;
   source: string;
   media_keys: string[];
+  client_token: string; // stable idempotency token; reused on every sync retry
   created_at: string;
   synced: 0 | 1;
 }
