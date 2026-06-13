@@ -44,6 +44,17 @@ def presigned_put(key: str, ttl: int = 3600) -> str:
     )
 
 
+def put_bytes(key: str, data: bytes, content_type: str | None = None) -> None:
+    """Upload bytes directly. Used for AES ciphertext (sensitive) and small originals.
+    These are SYNC boto3 calls — callers in async routes must wrap with run_in_threadpool."""
+    extra = {"ContentType": content_type} if content_type else {}
+    _s3.put_object(Bucket=settings.s3_bucket, Key=key, Body=data, **extra)
+
+
+def get_bytes(key: str) -> bytes:
+    return _s3.get_object(Bucket=settings.s3_bucket, Key=key)["Body"].read()
+
+
 def new_nonce() -> bytes:
     return os.urandom(12)
 

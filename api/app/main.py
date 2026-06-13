@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
-from .routers import capture, health, timeline
+from .routers import capture, health, photos, timeline
 
 app = FastAPI(title="LifeOS API", version="0.1.0")
 
@@ -17,3 +17,4 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(capture.router)
 app.include_router(timeline.router)
+app.include_router(photos.router)

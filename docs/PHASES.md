@@ -18,7 +18,7 @@ Decisions, full feature catalog, and grounding (reader3/EPUB, landscape, Withing
 - ⬜ Timeline **read API** + daily **timeline UI** + capture screen wired to the live API.
 - ⬜ Passkey auth (2 passkeys + recovery code).
 - ⬜ Seed care products/routines from RevampPrince (local-only seed).
-- ⬜ Photo capture → R2 (AES on sensitive) + ghost-overlay.
+- ✅ **Photo capture vertical slice** — upload face/skin/body/nails/hair → R2 (AES-256-GCM on sensitive; `0002` migration adds `enc_nonce`/`content_type`) → **ZDR Claude vision** observations (`app/vision.py`, `exclude_from_cloud_ai` respected) → `photo` TimelineEvent → thumbnail + observations on the timeline. Client downsamples to ≤2048px pre-upload. Routes: `POST /photos`, `GET /photos/{id}`, `GET /photos/{id}/image` (decrypt-on-read proxy). ⬜ ghost-overlay (prev_photo_id is stored, alignment UI later).
 - ⬜ Withings webhook → `body_metrics` (worker job).
 - ✅ **`api` deployed & live on Railway** (Docker) → https://api-production-507b.up.railway.app (`/docs`, `/health`, `/timeline`). `worker` deferred until its jobs exist.
 - ✅ **Web PWA deployed & live** → https://web-production-168bf.up.railway.app (Caddy static + SPA fallback; CORS wired to the api). Full stack verified end-to-end in prod (capture → OpenRouter → timeline).

@@ -38,3 +38,20 @@ class TimelineEntryOut(BaseModel):
     confidence: float | None = None
     structured: dict | None = None
     raw_input: str | None = None
+    ref_table: str | None = None
+    ref_id: uuid.UUID | None = None  # e.g. photos.id -> client builds /photos/{ref_id}/image
+    media: list = []
+
+
+class PhotoOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    photo_type: str
+    sensitive: bool
+    exclude_from_cloud_ai: bool
+    analysis: dict | None = None
+    ai_model: str | None = None
+    ai_confidence: float | None = None
+    notes: str | None = None
+    event_id: uuid.UUID | None = None  # set on create

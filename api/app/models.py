@@ -128,6 +128,8 @@ class Photo(Base):
     ai_confidence: Mapped[float | None] = mapped_column(Float)
     sensitive: Mapped[bool] = mapped_column(default=False)
     exclude_from_cloud_ai: Mapped[bool] = mapped_column(default=False)
+    enc_nonce: Mapped[str | None] = mapped_column(String(32))  # base64 of 12-byte AES-GCM nonce (sensitive only)
+    content_type: Mapped[str | None] = mapped_column(String(64))
     notes: Mapped[str | None] = mapped_column(Text)
 
 
