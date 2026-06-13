@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+node_modules/
+dist/
+build/
+.DS_Store
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Private personal data — NEVER publish (kept local for the build only)
+docs/SEED-care-revampprince.md
+private/
+*.local
