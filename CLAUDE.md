@@ -56,11 +56,10 @@ LifeOS is a **single-user, web-first PWA** for daily life-tracking + AI analysis
 - **Worker jobs idempotent**; watchdog alerts on stuck `doing` jobs; polling (not NOTIFY) is source of truth; deterministic `rembg` fallback for cutouts.
 
 ## Commands
-> Scaffolding pending (Phase 2). Fill in as built:
-- `web`: `cd web && pnpm dev` · build `pnpm build`
-- `api`: `cd api && uv run fastapi dev` · migrate `uv run alembic upgrade head`
-- `worker`: `cd worker && uv run arq worker.WorkerSettings`
-- Deploy: Railway (see `use-railway` skill).
+- **api** (Python/uv): `cd api && uv sync && uv run fastapi dev app/main.py` (→ :8000) · migrate `uv run alembic upgrade head` · the ASGI app is testable via `fastapi.testclient.TestClient`.
+- **web** (npm — has `package-lock.json`): `cd web && npm install && npm run dev` (→ :5173) · build `npm run build`.
+- **worker** (Procrastinate, when deployed): `cd worker && procrastinate --app=worker.app schema --apply` then `procrastinate --app=worker.app worker`.
+- **Deploy / redeploy / live URLs:** see `docs/DEPLOY.md`. Monorepo deploys MUST use `railway up ./<dir> --path-as-root --service <name>`.
 
 ## External docs
 - **Use Context7** for any library/framework/API/SDK question (React, Vite, FastAPI, DSPy, google-genai, Anthropic SDK, pgvector, Withings) — even when you think you know. Prefer it over web search for library docs.
@@ -77,12 +76,10 @@ After each working iteration or decision, update `CLAUDE.md` + the affected `doc
 - Keep model ids / library versions current; never hardcode a stale id.
 - Add a dated one-liner to the Changelog for every material change.
 
-## Changelog
-- 2026-06-13 — Phase 0+1 done; web/api/worker skeleton scaffolded.
-- 2026-06-13 — Route ALL chat/vision LLMs via **OpenRouter**; models = Gemini 3.1-flash-image / 3.1-flash-lite / 3.5-flash, Claude Sonnet 4.6 / Haiku 4.5, Voyage 4 embeddings. Full stack refresh under active grounding via 9 sub-agents.
-- 2026-06-13 — **API DEPLOYED & LIVE** at `api-production-507b.up.railway.app` (Railway Docker, private-net Postgres). Deploy gotchas fixed: monorepo `railway up ./api --path-as-root`, Railway builder rejects BuildKit `--mount` (use plain `COPY`), bind `0.0.0.0` not `::` for the HTTP edge.
-- 2026-06-13 — **FOUNDATION LIVE:** Railway Postgres **18.4 + pgvector** provisioned; Alembic `0001` applied (timeline spine + 11 domain tables); **capture→OpenRouter (Claude Haiku 4.5) parsing verified end-to-end** (freeform → routed structured entry → persisted). R2 `lifeos-media` verified. Public repo pushed.
-- 2026-06-13 — Owner decisions: media → **Cloudflare R2** (not Railway Buckets); sensitive-AI → **OpenRouter for everything** (ZDR, no split). Scaffold regenerated to final stack (async SQLAlchemy/psycopg3, Procrastinate worker, R2 storage+AES module, uv Dockerfile, pinned web deps).
-- 2026-06-13 — R2 setup guide grounded (`research/cloudflare-r2-setup.md`); `storage.py` patched for R2 boto3 checksum/path-style gotcha; **capture parsing wired to DSPy-over-OpenRouter** (real structured-default-else-freeform in `app/ai.py`). Railway provisioning held (build-first; CLI authed, target = personal workspace).
-- 2026-06-13 — Adversarial architecture review → `research/architecture-review.md`. Adopted: lazy embeddings, AI-output-as-observation, worker idempotency+watchdog, rembg cutout fallback, 2-passkey+recovery. Pending owner call: media storage (R2 vs Railway Buckets) + sensitive-AI routing (split vs OpenRouter-all). Bleeding-edge + OpenRouter + full-scope kept per owner.
-- 2026-06-13 — Stack grounding COMPLETE (9 agents → `research/stack-grounding.md`). LOCKED: React 19.2/Vite 8/Tailwind v4 · Python 3.13/FastAPI 0.136/Pydantic 2.13/DSPy 3.2/uv · PostgreSQL 18 + pgvector (no separate vector DB) · SQLAlchemy 2.0 async + psycopg 3 · **Procrastinate (dropped Redis/arq)** · Railway Buckets + app-side AES · ElevenLabs Scribe STT. OpenRouter serves image-gen too → only Voyage + ElevenLabs need direct keys. Sensitive images never to nano-banana; ZDR enforced. Scaffold refreshed to match.
+## Changelog (newest first)
+- 2026-06-13 — **FULL STACK LIVE.** Web PWA deployed (Caddy static) at `web-production-168bf.up.railway.app` + CORS wired to api (`FRONTEND_ORIGIN`); verified end-to-end in prod (capture→OpenRouter→timeline). Added `docs/DEPLOY.md` (URLs, redeploy commands, gotchas).
+- 2026-06-13 — **API deployed & live** at `api-production-507b.up.railway.app` (Railway Docker, private-net Postgres). Deploy gotchas: monorepo `--path-as-root`; Railway builder rejects BuildKit `--mount` (use plain `COPY`); bind `0.0.0.0` not `::`.
+- 2026-06-13 — **Foundation live:** Postgres 18.4 + pgvector; Alembic `0001` (timeline spine + 11 tables); capture→OpenRouter parse verified e2e. Public repo (MIT) pushed → github.com/Princeu3/LifeOS.
+- 2026-06-13 — Owner decisions: media → **Cloudflare R2**; sensitive-AI → **OpenRouter for everything** (ZDR). Scaffold = async SQLAlchemy/psycopg3, Procrastinate (no Redis), R2+AES, uv Docker, pinned web deps.
+- 2026-06-13 — Stack grounded & pinned via 9 sub-agents (→ `research/`): React 19.2/Vite 8/Tailwind v4 · Python 3.13/FastAPI 0.136/Pydantic 2.13/DSPy 3.2/uv · pgvector (no separate vector DB) · Voyage 4 · ElevenLabs STT. Adversarial review adopted: lazy embeddings, AI-as-observation, idempotent workers, rembg fallback, 2-passkey recovery.
+- 2026-06-13 — Phases 0+1: discovery, full feature catalog, architecture spec, web/api/worker scaffold.
