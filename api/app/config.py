@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     # Postgres — async app driver = psycopg 3; Alembic uses the same URL synchronously.
     database_url: str = "postgresql+psycopg://lifeos:lifeos@localhost:5432/lifeos"
     procrastinate_dsn: str = "postgresql://lifeos:lifeos@localhost:5432/lifeos"  # libpq for the queue
+    frontend_origin: str | None = None  # deployed web origin, added to CORS allow-list
 
     # AI — chat/vision/image-gen ALL via OpenRouter (one key); embeddings + STT direct.
     openrouter_api_key: str | None = None

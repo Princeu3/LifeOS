@@ -1,13 +1,14 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .config import settings
 from .routers import capture, health, timeline
 
 app = FastAPI(title="LifeOS API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Vite dev server
+    allow_origins=["http://localhost:5173", *([settings.frontend_origin] if settings.frontend_origin else [])],
     allow_methods=["*"],
     allow_headers=["*"],
     allow_credentials=True,
