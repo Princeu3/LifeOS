@@ -139,10 +139,10 @@ class SleepIn(_Base):
 
 
 class FoodIn(_Base):
-    meal_type: Str = _a("meal_type", "meal", "type")
+    meal_type: Str = _a("meal_type", "type")
     dish_text: Str = _a("dish_text", "dish", "food", "meal_name", "item", "description")
     ingredients: Lst = _a("ingredients", "items")
-    macros: Dct = _a("macros", "macro", "nutrition")
+    macros: Dct = _a("macros", "macro")  # NOT "nutrition" — that's the domain wrapper key
     caffeine_mg: Flt = _a("caffeine_mg", "caffeine")
     alcohol_units: Flt = _a("alcohol_units", "alcohol", "drinks")
     notes: Str = _a("notes", "note")
@@ -173,6 +173,29 @@ class CareIn(_Base):
     completed: Bln = Field(default=True, validation_alias=AliasChoices("completed", "done", "complete"))
     exceptions: Lst = _a("exceptions", "skipped", "missed")
     notes: Str = _a("notes", "note", "routine", "routine_name")
+
+
+# LLMs sometimes nest the extracted fields under a top-level domain-named key,
+# e.g. {"sleep": {...}} or {"nutrition": {macros, dish_text, ...}}. Flatten those wrappers
+# up so the typed projections find the fields (don't trust the LLM's nesting — grounded lesson).
+_WRAPPERS: dict[Domain, set[str]] = {
+    Domain.sleep: {"sleep"},
+    Domain.nutrition: {"nutrition", "food", "meal", "diet"},
+    Domain.mood: {"mood", "mental"},
+    Domain.egestion: {"egestion", "bristol", "stool", "urine", "urination", "bowel"},
+    Domain.care: {"care", "routine", "skincare", "hygiene"},
+}
+
+
+def _flatten(domain: Domain, s: dict) -> dict:
+    wrappers = _WRAPPERS.get(domain, set())
+    out: dict = {}
+    for k, v in s.items():
+        if isinstance(v, dict) and k.lower() in wrappers:
+            out.update(v)  # hoist a domain-named wrapper dict to the top level
+        else:
+            out.setdefault(k, v)
+    return out
 
 
 def _validate(model: type[_Base], structured: dict) -> _Base | None:
@@ -210,6 +233,7 @@ def normalize(domain: Domain, structured: dict | None) -> tuple[str, Any] | None
     s = structured or {}
     if not isinstance(s, dict):
         return None
+    s = _flatten(domain, s)
 
     if domain == Domain.egestion:
         return _normalize_egestion(s)

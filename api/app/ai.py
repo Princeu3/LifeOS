@@ -47,6 +47,7 @@ _STRUCTURED_HINT = (
     "mood{mood(1-5),energy(1-5),stress(1-5),journal}; "
     "egestion{bristol_type(1-7),color,straining,blood,pain} OR {color_scale(1-8)} for urine; "
     "care{completed,exceptions[]}. Use ISO 8601 for any datetime, resolving relative times against `now`. "
+    "Put the fields FLAT at the top level of `structured` — do NOT nest them under a domain name. "
     "Put anything you can't confidently bucket into 'notes'. Never invent values."
 )
 
