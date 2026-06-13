@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from .config import settings
 
 # psycopg 3 powers the async engine; Alembic uses the same URL synchronously.
-engine = create_async_engine(settings.database_url, pool_pre_ping=True)
+engine = create_async_engine(settings.sqlalchemy_url, pool_pre_ping=True)
 SessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False)
 
 

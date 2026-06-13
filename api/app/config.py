@@ -37,5 +37,13 @@ class Settings(BaseSettings):
     withings_client_secret: str | None = None
     withings_redirect_uri: str = "http://localhost:8000/withings/callback"
 
+    @property
+    def sqlalchemy_url(self) -> str:
+        """Async SQLAlchemy URL. Railway provides plain `postgresql://`; psycopg driver is required."""
+        u = self.database_url
+        if u.startswith("postgresql://"):
+            return "postgresql+psycopg://" + u[len("postgresql://") :]
+        return u
+
 
 settings = Settings()
