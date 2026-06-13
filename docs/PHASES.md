@@ -20,7 +20,8 @@ Decisions, full feature catalog, and grounding (reader3/EPUB, landscape, Withing
 - ⬜ Seed care products/routines from RevampPrince (local-only seed).
 - ⬜ Photo capture → R2 (AES on sensitive) + ghost-overlay.
 - ⬜ Withings webhook → `body_metrics` (worker job).
-- ⬜ Deploy `api` + `worker` services to Railway.
+- ✅ **`api` deployed & live on Railway** (Docker) → https://api-production-507b.up.railway.app (`/docs`, `/health`, `/timeline`). `worker` deferred until its jobs exist.
+- ⬜ Deploy the **web** PWA (build w/ `VITE_API_URL`, set api `FRONTEND_ORIGIN` for CORS) → screenshot for README.
 
 ## Phase 3 — Rich Domains ⬜
 Books + EPUB reader · wardrobe + outfits (nano-banana + rembg, R2) · gym (Nippard schema) · work-hours · supplements/meds · symptoms · weather+location.
