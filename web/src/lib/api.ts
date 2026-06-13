@@ -41,3 +41,18 @@ export async function syncQueue(): Promise<void> {
 }
 
 window.addEventListener("online", () => void syncQueue());
+
+export interface TimelineEntry {
+  id: string;
+  occurred_at: string;
+  domain: string;
+  source: string;
+  summary: string | null;
+  confidence: number | null;
+}
+
+export async function fetchTimeline(): Promise<TimelineEntry[]> {
+  const r = await fetch(`${API}/timeline`);
+  if (!r.ok) throw new Error(`timeline ${r.status}`);
+  return r.json();
+}

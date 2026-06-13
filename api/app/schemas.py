@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from .models import Domain, Source
 
@@ -25,3 +25,16 @@ class ParsedEntry(BaseModel):
 class CaptureResponse(BaseModel):
     event_id: uuid.UUID
     parsed: ParsedEntry
+
+
+class TimelineEntryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    occurred_at: datetime
+    domain: Domain
+    source: Source
+    summary: str | None = None
+    confidence: float | None = None
+    structured: dict | None = None
+    raw_input: str | None = None
