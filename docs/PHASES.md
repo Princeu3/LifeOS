@@ -21,7 +21,7 @@ Decisions, full feature catalog, and grounding (reader3/EPUB, landscape, Withing
 - ⬜ Photo capture → R2 (AES on sensitive) + ghost-overlay.
 - ⬜ Withings webhook → `body_metrics` (worker job).
 - ✅ **`api` deployed & live on Railway** (Docker) → https://api-production-507b.up.railway.app (`/docs`, `/health`, `/timeline`). `worker` deferred until its jobs exist.
-- ⬜ Deploy the **web** PWA (build w/ `VITE_API_URL`, set api `FRONTEND_ORIGIN` for CORS) → screenshot for README.
+- ✅ **Web PWA deployed & live** → https://web-production-168bf.up.railway.app (Caddy static + SPA fallback; CORS wired to the api). Full stack verified end-to-end in prod (capture → OpenRouter → timeline).
 
 ## Phase 3 — Rich Domains ⬜
 Books + EPUB reader · wardrobe + outfits (nano-banana + rembg, R2) · gym (Nippard schema) · work-hours · supplements/meds · symptoms · weather+location.
