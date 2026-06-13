@@ -32,6 +32,7 @@ async def capture(req: CaptureRequest, db: AsyncSession = Depends(get_db)) -> Ca
         source=req.source,
         raw_input=req.text,  # ALWAYS retained
         summary=parsed.summary,
+        structured=parsed.structured,  # parsed fields kept on the event (pre-normalization)
         media=[{"bucket_key": k} for k in req.media_keys],
         confidence=parsed.confidence,
     )

@@ -1,12 +1,10 @@
 """SQLAlchemy 2.0 models.
 
-The `timeline_events` table is the append-only spine that unifies every domain for
-the timeline, semantic search, and embeddings. Normalized per-domain tables hold the
-structured data and are referenced via (ref_table, ref_id). Every domain table keeps a
-freeform `notes` field — "structured default, freeform fallback".
-
-Only representative domains are scaffolded here; add the rest per the CLAUDE.md
-"new tracking domain" checklist. Enums must stay in lockstep with the generated TS types.
+The `timeline_events` table is the append-only spine that unifies every domain for the timeline,
+semantic search, and embeddings. Each event keeps the parsed `structured` payload (JSONB) and the
+raw input; normalized per-domain tables hold richer structured data and are referenced via
+(ref_table, ref_id). Every domain table keeps a freeform `notes` field — "structured default,
+freeform fallback". Enums must stay in lockstep with the generated TS types.
 """
 
 from __future__ import annotations
@@ -23,6 +21,10 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 class Base(DeclarativeBase):
     pass
+
+
+def _pk() -> Mapped[uuid.UUID]:
+    return mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
 
 class Domain(str, enum.Enum):
@@ -55,7 +57,7 @@ class Source(str, enum.Enum):
 class TimelineEvent(Base):
     __tablename__ = "timeline_events"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = _pk()
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     logged_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -65,18 +67,19 @@ class TimelineEvent(Base):
     source: Mapped[Source] = mapped_column(Enum(Source, name="source"))
     raw_input: Mapped[str | None] = mapped_column(Text)  # original text/transcript — ALWAYS kept
     summary: Mapped[str | None] = mapped_column(Text)  # human + embeddable one-liner
-    embedding: Mapped[list[float] | None] = mapped_column(Vector(1024))
+    structured: Mapped[dict] = mapped_column(JSONB, default=dict)  # parsed fields (pre-normalization)
+    embedding: Mapped[list[float] | None] = mapped_column(Vector(1024))  # LAZY: populated at chat phase
     media: Mapped[list] = mapped_column(JSONB, default=list)
     confidence: Mapped[float | None] = mapped_column(Float)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
-# --- representative domain tables (structured columns + freeform notes) ---
+# --- domain tables (structured columns + freeform notes) ---
 
 
 class SleepLog(Base):
     __tablename__ = "sleep_logs"
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = _pk()
     bed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     wake_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     quality: Mapped[int | None] = mapped_column(Integer)  # 1-5
@@ -86,7 +89,7 @@ class SleepLog(Base):
 
 class FoodLog(Base):
     __tablename__ = "food_logs"
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = _pk()
     meal_type: Mapped[str | None] = mapped_column(String(16))
     dish_text: Mapped[str | None] = mapped_column(Text)
     ingredients: Mapped[list | None] = mapped_column(JSONB)  # AI-derived, no manual pantry
@@ -101,7 +104,7 @@ class BodyMetric(Base):
     """Synced from Withings (see docs/research/withings-api.md)."""
 
     __tablename__ = "body_metrics"
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = _pk()
     measured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     weight_kg: Mapped[float | None] = mapped_column(Float)
     fat_pct: Mapped[float | None] = mapped_column(Float)
@@ -116,7 +119,7 @@ class BodyMetric(Base):
 
 class Photo(Base):
     __tablename__ = "photos"
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = _pk()
     photo_type: Mapped[str] = mapped_column(String(16))  # face|skin|body|hair|nails
     bucket_key: Mapped[str] = mapped_column(String(256))
     prev_photo_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))  # ghost-overlay
@@ -130,8 +133,63 @@ class Photo(Base):
 
 class MoodLog(Base):
     __tablename__ = "mood_logs"
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = _pk()
     mood: Mapped[int | None] = mapped_column(Integer)  # 1-5
     energy: Mapped[int | None] = mapped_column(Integer)  # 1-5
     stress: Mapped[int | None] = mapped_column(Integer)  # 1-5
     journal: Mapped[str | None] = mapped_column(Text)
+
+
+class BristolLog(Base):
+    """Egestion — bowel. True 7-type Bristol scale + flags."""
+
+    __tablename__ = "bristol_logs"
+    id: Mapped[uuid.UUID] = _pk()
+    bristol_type: Mapped[int | None] = mapped_column(Integer)  # 1-7
+    color: Mapped[str | None] = mapped_column(String(32))
+    straining: Mapped[bool | None] = mapped_column()
+    blood: Mapped[bool | None] = mapped_column()
+    pain: Mapped[bool | None] = mapped_column()
+    notes: Mapped[str | None] = mapped_column(Text)
+
+
+class UrineLog(Base):
+    """Egestion — urination. 8-level urine color (hydration) scale."""
+
+    __tablename__ = "urine_logs"
+    id: Mapped[uuid.UUID] = _pk()
+    color_scale: Mapped[int | None] = mapped_column(Integer)  # 1-8
+    notes: Mapped[str | None] = mapped_column(Text)
+
+
+class Product(Base):
+    """Care inventory (seeded from RevampPrince). INCI for skin-correlation; no depletion tracking."""
+
+    __tablename__ = "products"
+    id: Mapped[uuid.UUID] = _pk()
+    name: Mapped[str] = mapped_column(String(128))
+    brand: Mapped[str | None] = mapped_column(String(128))
+    category: Mapped[str | None] = mapped_column(String(32))  # face|hair|body
+    role: Mapped[str | None] = mapped_column(String(64))  # cleanser|moisturizer|spf|retinoid|...
+    inci: Mapped[list | None] = mapped_column(JSONB)
+    notes: Mapped[str | None] = mapped_column(Text)
+
+
+class CareRoutine(Base):
+    """A 1-tap routine template; phase-versioned over time."""
+
+    __tablename__ = "care_routines"
+    id: Mapped[uuid.UUID] = _pk()
+    name: Mapped[str] = mapped_column(String(64))  # AM / PM / shower / hair / body
+    time_of_day: Mapped[str | None] = mapped_column(String(16))
+    steps: Mapped[list | None] = mapped_column(JSONB)  # [{step, product_id?}]
+    notes: Mapped[str | None] = mapped_column(Text)
+
+
+class CareRoutineRun(Base):
+    __tablename__ = "care_routine_runs"
+    id: Mapped[uuid.UUID] = _pk()
+    routine_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    completed: Mapped[bool] = mapped_column(default=True)
+    exceptions: Mapped[list | None] = mapped_column(JSONB)
+    notes: Mapped[str | None] = mapped_column(Text)

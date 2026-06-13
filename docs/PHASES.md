@@ -6,21 +6,24 @@
 Decisions, full feature catalog, and grounding (reader3/EPUB, landscape, Withings, image pipeline, gym sheet, RevampPrince seed) — see `DECISIONS.md`, `FEATURE-CATALOG.md`, `research/`.
 
 ## Phase 1 — Product & Architecture Spec ✅
-`ARCHITECTURE.md` (data model, AI routing, privacy), `CLAUDE.md`, stack grounded & pinned (`research/stack-grounding.md`), adversarial review (`research/architecture-review.md`).
+`ARCHITECTURE.md`, `CLAUDE.md`, stack grounded & pinned (`research/stack-grounding.md`), adversarial review (`research/architecture-review.md`).
 
 ## Phase 2 — Foundation / MVP 🔄
-- ✅ Stack & architecture locked; adversarial review folded in.
-- ✅ Scaffold regenerated to final stack: async SQLAlchemy + psycopg3, Procrastinate worker, R2 + AES storage module, OpenRouter config, uv multi-stage Dockerfile, pinned React 19.2/Vite 8/Tailwind v4.
-- ⬜ Provision Railway (PG18+pgvector, api, worker) + Cloudflare R2 bucket — **needs R2 creds; greenlight to provision (incurs cost).**
-- ⬜ Alembic initial migration (timeline_events + domain tables) + pgvector extension.
+- ✅ Stack & architecture locked; review folded in; scaffold regenerated to final stack.
+- ✅ Public OSS repo: github.com/Princeu3/LifeOS (MIT).
+- ✅ **Railway `LifeOS` project + Postgres 18.4 provisioned**; **Cloudflare R2 `lifeos-media` wired + verified**.
+- ✅ **Alembic `0001` migration applied** — `pgvector` extension + `timeline_events` spine + 11 domain tables (sleep, food, body_metrics, photos, mood, bristol, urine, products, care_routines, care_routine_runs).
+- ✅ **Capture → DSPy/OpenRouter parsing verified end-to-end** (freeform → routed structured entry → persisted). Parsed `structured` stored on each event.
+- 🔄 Per-domain endpoints + normalize `structured` into domain tables (sleep · nutrition · mood · egestion · care).
+- ⬜ Timeline **read API** + daily **timeline UI** + capture screen wired to the live API.
 - ⬜ Passkey auth (2 passkeys + recovery code).
-- ⬜ Wire capture → DSPy/OpenRouter parsing (structured-default-else-freeform); persist into domain tables.
-- ⬜ Build first domains end-to-end: **sleep · nutrition(+caffeine/alcohol) · mood · egestion · care (RevampPrince-seeded)** + the daily timeline UI.
-- ⬜ Photo capture → R2 (AES on sensitive) + ghost-overlay; import RevampPrince baseline photos.
-- ⬜ Withings webhook → `body_metrics`.
+- ⬜ Seed care products/routines from RevampPrince (local-only seed).
+- ⬜ Photo capture → R2 (AES on sensitive) + ghost-overlay.
+- ⬜ Withings webhook → `body_metrics` (worker job).
+- ⬜ Deploy `api` + `worker` services to Railway.
 
 ## Phase 3 — Rich Domains ⬜
-Books + EPUB reader · wardrobe + outfits (nano-banana + rembg fallback, R2) · gym (Nippard schema) · work-hours · supplements/meds · symptoms · weather+location.
+Books + EPUB reader · wardrobe + outfits (nano-banana + rembg, R2) · gym (Nippard schema) · work-hours · supplements/meds · symptoms · weather+location.
 
 ## Phase 4 — AI Layer ⬜
 Voice (ElevenLabs) → structured entry · photo feature-extraction · nightly insight engine (confidence-scored, causal-leaning). Begin LAZY embedding generation.
