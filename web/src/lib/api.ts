@@ -103,3 +103,17 @@ export async function uploadPhoto(
   if (!r.ok) throw new Error(`photo upload ${r.status}`);
   return r.json();
 }
+
+export interface PhotoRef {
+  id: string;
+  photo_type: string;
+  created_at: string;
+  media_token: string;
+}
+
+// The most recent photo of a type — used as the ghost-overlay reference for the next capture.
+export async function fetchLatestPhoto(photoType: PhotoType): Promise<PhotoRef | null> {
+  const r = await authedFetch(`/photos/latest?photo_type=${encodeURIComponent(photoType)}`);
+  if (!r.ok) throw new Error(`latest photo ${r.status}`);
+  return r.json(); // null when there's no prior photo of this type
+}

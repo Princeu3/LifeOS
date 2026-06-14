@@ -20,13 +20,14 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query, Response, UploadFile
 from fastapi.concurrency import run_in_threadpool
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import storage
-from ..auth import image_auth_ok, require_auth
+from ..auth import image_auth_ok, make_media_token, require_auth
 from ..db import get_db
 from ..models import Domain, Photo, Source, TimelineEvent
-from ..schemas import PhotoOut
+from ..schemas import PhotoOut, PhotoRef
 from ..vision import analyze_photo
 
 router = APIRouter(prefix="/photos", tags=["photos"])
@@ -65,6 +66,14 @@ async def _read_capped(file: UploadFile) -> bytes:
             raise HTTPException(413, f"image exceeds {MAX_BYTES // (1024 * 1024)} MB cap")
         chunks.append(chunk)
     return b"".join(chunks)
+
+
+async def _latest_of_type(db: AsyncSession, photo_type: str) -> Photo | None:
+    return (
+        await db.execute(
+            select(Photo).where(Photo.photo_type == photo_type).order_by(Photo.created_at.desc()).limit(1)
+        )
+    ).scalar_one_or_none()
 
 
 def _safe_name(name: str | None, mime: str) -> str:
@@ -115,7 +124,11 @@ async def upload_photo(
         vision = await analyze_photo(raw, mime, photo_type)
 
     occurred = datetime.fromisoformat(occurred_at) if occurred_at else datetime.now(timezone.utc)
+    # Auto-chain to the previous same-type photo (ghost-overlay reference) unless one was given.
     prev_id = uuid.UUID(prev_photo_id) if prev_photo_id else None
+    if prev_id is None:
+        prev = await _latest_of_type(db, photo_type)
+        prev_id = prev.id if prev else None
 
     photo = Photo(
         id=photo_id,
@@ -158,6 +171,26 @@ async def upload_photo(
     out = PhotoOut.model_validate(photo)
     out.event_id = event.id
     return out
+
+
+@router.get("/latest", response_model=PhotoRef | None)
+async def latest_photo(
+    photo_type: str = Query(...),
+    _: uuid.UUID = Depends(require_auth),
+    db: AsyncSession = Depends(get_db),
+) -> PhotoRef | None:
+    """Most recent photo of a type — the ghost-overlay reference for the next capture."""
+    if photo_type not in PHOTO_TYPES:
+        raise HTTPException(422, f"photo_type must be one of {sorted(PHOTO_TYPES)}")
+    photo = await _latest_of_type(db, photo_type)
+    if not photo:
+        return None
+    return PhotoRef(
+        id=photo.id,
+        photo_type=photo.photo_type,
+        created_at=photo.created_at,
+        media_token=make_media_token(photo.id),  # so the composer can load the ghost <img>
+    )
 
 
 @router.get("/{photo_id}", response_model=PhotoOut)

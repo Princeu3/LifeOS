@@ -75,6 +75,15 @@ class TimelineDetailOut(TimelineEntryOut):
     domain_row: dict | None = None
 
 
+class PhotoRef(BaseModel):
+    """Lightweight reference to a photo (e.g. the ghost-overlay source)."""
+
+    id: uuid.UUID
+    photo_type: str
+    created_at: datetime
+    media_token: str
+
+
 class PhotoOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
