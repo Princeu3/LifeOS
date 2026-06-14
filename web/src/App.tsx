@@ -46,13 +46,35 @@ function observationsOf(e: TimelineEntry): string[] {
   return Array.isArray(a?.observations) ? (a!.observations as string[]).slice(0, 3) : [];
 }
 
+// Render an ISO 8601 datetime string as a readable date/time, else null.
+function maybeDate(s: string): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(s)) return null;
+  const d = new Date(s);
+  return isNaN(d.getTime())
+    ? null
+    : d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+// Format a structured value for display (dates, nested objects like macros, arrays, scalars).
+function fmtVal(v: unknown): string {
+  if (v == null) return "";
+  if (Array.isArray(v))
+    return v.map((x) => (x && typeof x === "object" ? Object.values(x).join(" ") : String(x))).join(", ");
+  if (typeof v === "object")
+    return Object.entries(v as Record<string, unknown>)
+      .map(([k, val]) => `${k.replace(/_/g, " ")} ${val}`)
+      .join(" · ");
+  if (typeof v === "string") return maybeDate(v) ?? v;
+  return String(v);
+}
+
 // Structured fields to reveal on expand (the parse the API filed into a domain table).
 function structuredPairs(e: TimelineEntry): [string, string][] {
   const s = e.structured ?? {};
   return Object.entries(s)
     .filter(([k]) => k !== "analysis" && k !== "prompt_version")
-    .map(([k, v]) => [k, typeof v === "object" && v !== null ? JSON.stringify(v) : String(v)] as [string, string])
-    .filter(([, v]) => v && v !== "null" && v !== "{}" && v !== "[]");
+    .map(([k, v]) => [k, fmtVal(v)] as [string, string])
+    .filter(([, v]) => v && v !== "{}" && v !== "[]");
 }
 
 export default function App() {

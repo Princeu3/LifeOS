@@ -31,15 +31,19 @@ app = App(connector=PsycopgConnector(conninfo=_dsn()))
 
 _UPSERT = """
 INSERT INTO body_metrics
-  (id, grpid, measured_at, weight_kg, fat_pct, fat_mass_kg, lean_mass_kg,
+  (id, measured_at, weight_kg, fat_pct, fat_mass_kg, lean_mass_kg,
    muscle_mass_kg, body_water_kg, bone_mass_kg, heart_rate, source)
-VALUES (gen_random_uuid(), %(grpid)s, %(measured_at)s, %(weight_kg)s, %(fat_pct)s, %(fat_mass_kg)s,
+VALUES (gen_random_uuid(), %(measured_at)s, %(weight_kg)s, %(fat_pct)s, %(fat_mass_kg)s,
         %(lean_mass_kg)s, %(muscle_mass_kg)s, %(body_water_kg)s, %(bone_mass_kg)s, %(heart_rate)s, 'withings')
-ON CONFLICT (grpid) DO UPDATE SET
-  measured_at=EXCLUDED.measured_at, weight_kg=EXCLUDED.weight_kg, fat_pct=EXCLUDED.fat_pct,
-  fat_mass_kg=EXCLUDED.fat_mass_kg, lean_mass_kg=EXCLUDED.lean_mass_kg,
-  muscle_mass_kg=EXCLUDED.muscle_mass_kg, body_water_kg=EXCLUDED.body_water_kg,
-  bone_mass_kg=EXCLUDED.bone_mass_kg, heart_rate=EXCLUDED.heart_rate
+ON CONFLICT (measured_at) DO UPDATE SET
+  weight_kg=COALESCE(EXCLUDED.weight_kg, body_metrics.weight_kg),
+  fat_pct=COALESCE(EXCLUDED.fat_pct, body_metrics.fat_pct),
+  fat_mass_kg=COALESCE(EXCLUDED.fat_mass_kg, body_metrics.fat_mass_kg),
+  lean_mass_kg=COALESCE(EXCLUDED.lean_mass_kg, body_metrics.lean_mass_kg),
+  muscle_mass_kg=COALESCE(EXCLUDED.muscle_mass_kg, body_metrics.muscle_mass_kg),
+  body_water_kg=COALESCE(EXCLUDED.body_water_kg, body_metrics.body_water_kg),
+  bone_mass_kg=COALESCE(EXCLUDED.bone_mass_kg, body_metrics.bone_mass_kg),
+  heart_rate=COALESCE(EXCLUDED.heart_rate, body_metrics.heart_rate)
 RETURNING id, (xmax = 0) AS inserted
 """
 
@@ -56,14 +60,20 @@ _COLS = (
 )
 
 
+_LABELS = (
+    ("weight_kg", "{} kg"),
+    ("fat_pct", "{}% fat"),
+    ("muscle_mass_kg", "{} kg muscle"),
+    ("lean_mass_kg", "{} kg lean"),
+    ("fat_mass_kg", "{} kg fat"),
+    ("body_water_kg", "{} kg water"),
+    ("bone_mass_kg", "{} kg bone"),
+    ("heart_rate", "{} bpm"),
+)
+
+
 def _summary(vals: dict) -> str:
-    bits = []
-    if "weight_kg" in vals:
-        bits.append(f"{vals['weight_kg']} kg")
-    if "fat_pct" in vals:
-        bits.append(f"{vals['fat_pct']}% fat")
-    if "muscle_mass_kg" in vals:
-        bits.append(f"{vals['muscle_mass_kg']} kg muscle")
+    bits = [fmt.format(vals[k]) for k, fmt in _LABELS if k in vals]
     return "Body · " + " · ".join(bits) if bits else "Body metrics"
 
 
@@ -98,18 +108,22 @@ async def withings_sync(startdate: int | None = None, enddate: int | None = None
             lastupdate = (
                 int(last_sync_at.timestamp())
                 if last_sync_at
-                else int((datetime.now(timezone.utc) - timedelta(days=90)).timestamp())
+                else int((datetime.now(timezone.utc) - timedelta(days=365)).timestamp())
             )
             groups = await wi.getmeas(access_token, lastupdate)
 
-            new_count, max_ts = 0, last_sync_at
+            # Withings splits one weigh-in across multiple grpids sharing the same `date` — merge
+            # them into one measurement per timestamp so the timeline shows a single rich entry.
+            merged: dict[int, dict] = {}
             for grp in groups:
                 vals = wi.parse_group(grp)
-                if not vals:
-                    continue
-                measured_at = datetime.fromtimestamp(grp["date"], tz=timezone.utc)
-                params = {"grpid": grp["grpid"], "measured_at": measured_at,
-                          **{c: None for c in _COLS}, **vals}
+                if vals:
+                    merged.setdefault(grp["date"], {}).update(vals)
+
+            new_count, max_ts = 0, last_sync_at
+            for date, vals in sorted(merged.items()):
+                measured_at = datetime.fromtimestamp(date, tz=timezone.utc)
+                params = {"measured_at": measured_at, **{c: None for c in _COLS}, **vals}
                 await cur.execute(_UPSERT, params)
                 row_id, inserted = await cur.fetchone()
                 if inserted:

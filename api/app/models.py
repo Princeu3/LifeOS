@@ -107,9 +107,11 @@ class BodyMetric(Base):
     """Synced from Withings (see docs/research/withings-api.md)."""
 
     __tablename__ = "body_metrics"
-    __table_args__ = (UniqueConstraint("grpid", name="uq_body_metrics_grpid"),)
+    # Dedupe per measurement timestamp — Withings splits one weigh-in across multiple grpids that
+    # share the same `date`, so we merge by measured_at into a single row.
+    __table_args__ = (UniqueConstraint("measured_at", name="uq_body_metrics_measured_at"),)
     id: Mapped[uuid.UUID] = _pk()
-    grpid: Mapped[int | None] = mapped_column(BigInteger)  # Withings measure-group id (dedupe)
+    grpid: Mapped[int | None] = mapped_column(BigInteger)  # representative Withings grp id (ref)
     measured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     weight_kg: Mapped[float | None] = mapped_column(Float)
     fat_pct: Mapped[float | None] = mapped_column(Float)
