@@ -55,26 +55,37 @@ function maybeDate(s: string): string | null {
     : d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
-// Format a structured value for display (dates, nested objects like macros, arrays, scalars).
+// Format a structured value for display — recursive (dates, nested objects like macros, arrays).
 function fmtVal(v: unknown): string {
   if (v == null) return "";
-  if (Array.isArray(v))
-    return v.map((x) => (x && typeof x === "object" ? Object.values(x).join(" ") : String(x))).join(", ");
+  if (Array.isArray(v)) return v.map(fmtVal).filter(Boolean).join(", ");
   if (typeof v === "object")
     return Object.entries(v as Record<string, unknown>)
-      .map(([k, val]) => `${k.replace(/_/g, " ")} ${val}`)
+      .map(([k, val]) => `${k.replace(/_/g, " ")} ${fmtVal(val)}`)
       .join(" · ");
   if (typeof v === "string") return maybeDate(v) ?? v;
   return String(v);
 }
 
+// Domain-name wrappers the LLM sometimes nests under — lift their fields to their own rows.
+const WRAPPER_KEYS = new Set([
+  "sleep", "nutrition", "food", "meal", "diet", "mood", "mental",
+  "egestion", "bristol", "stool", "urine", "care", "routine", "skincare", "hygiene",
+]);
+
 // Structured fields to reveal on expand (the parse the API filed into a domain table).
 function structuredPairs(e: TimelineEntry): [string, string][] {
   const s = e.structured ?? {};
-  return Object.entries(s)
-    .filter(([k]) => k !== "analysis" && k !== "prompt_version")
-    .map(([k, v]) => [k, fmtVal(v)] as [string, string])
-    .filter(([, v]) => v && v !== "{}" && v !== "[]");
+  const out: [string, string][] = [];
+  for (const [k, v] of Object.entries(s)) {
+    if (k === "analysis" || k === "prompt_version") continue;
+    if (v && typeof v === "object" && !Array.isArray(v) && WRAPPER_KEYS.has(k.toLowerCase())) {
+      for (const [k2, v2] of Object.entries(v as Record<string, unknown>)) out.push([k2, fmtVal(v2)]);
+    } else {
+      out.push([k, fmtVal(v)]);
+    }
+  }
+  return out.filter(([, v]) => v && v !== "{}" && v !== "[]");
 }
 
 export default function App() {

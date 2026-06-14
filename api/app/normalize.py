@@ -187,7 +187,11 @@ _WRAPPERS: dict[Domain, set[str]] = {
 }
 
 
-def _flatten(domain: Domain, s: dict) -> dict:
+def flatten(domain: Domain, s: dict | None) -> dict:
+    """Hoist a domain-named wrapper dict ({'sleep': {...}}) to the top level. Used both to
+    normalize into the domain row AND to store a clean `structured` on the event."""
+    if not isinstance(s, dict):
+        return {}
     wrappers = _WRAPPERS.get(domain, set())
     out: dict = {}
     for k, v in s.items():
@@ -233,7 +237,7 @@ def normalize(domain: Domain, structured: dict | None) -> tuple[str, Any] | None
     s = structured or {}
     if not isinstance(s, dict):
         return None
-    s = _flatten(domain, s)
+    s = flatten(domain, s)
 
     if domain == Domain.egestion:
         return _normalize_egestion(s)

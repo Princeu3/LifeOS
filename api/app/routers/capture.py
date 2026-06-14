@@ -17,7 +17,7 @@ from ..ai import parse_capture
 from ..auth import require_auth
 from ..db import get_db
 from ..models import TimelineEvent
-from ..normalize import normalize
+from ..normalize import flatten, normalize
 from ..schemas import CaptureRequest, CaptureResponse, ParsedEntry
 
 router = APIRouter(prefix="/capture", tags=["capture"], dependencies=[Depends(require_auth)])
@@ -64,6 +64,9 @@ async def capture(
             )
 
     parsed = parse_capture(req.text or "", req.domain_hint)
+    # Flatten any LLM domain-wrapper nesting before storing, so the event's structured is clean for
+    # the UI and future search (the raw text is always retained in raw_input).
+    structured = flatten(parsed.domain, parsed.structured)
     event = TimelineEvent(
         user_id=OWNER_ID,
         client_token=idempotency_key,
@@ -72,14 +75,14 @@ async def capture(
         source=req.source,
         raw_input=req.text,  # ALWAYS retained
         summary=parsed.summary,
-        structured=parsed.structured,  # full parse kept on the event (pre-normalization)
+        structured=structured,  # flattened parse kept on the event
         media=[{"bucket_key": k} for k in req.media_keys],
         confidence=parsed.confidence,
     )
     try:
         db.add(event)
         # Project the parse into a typed domain row and back-link it (timeline-spine ref_table/ref_id).
-        norm = normalize(parsed.domain, parsed.structured)
+        norm = normalize(parsed.domain, structured)
         if norm:
             ref_table, row = norm
             db.add(row)
