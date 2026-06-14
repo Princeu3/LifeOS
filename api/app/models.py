@@ -133,6 +133,7 @@ class Photo(Base):
     exclude_from_cloud_ai: Mapped[bool] = mapped_column(default=False)
     enc_nonce: Mapped[str | None] = mapped_column(String(32))  # base64 of 12-byte AES-GCM nonce (sensitive only)
     content_type: Mapped[str | None] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     notes: Mapped[str | None] = mapped_column(Text)
 
 
