@@ -5,7 +5,7 @@
 	# Tight-ish CSP — with a localStorage bearer token, XSS is the main theft vector (see grounding).
 	# connect/img allow the API origin; no Permissions-Policy so WebAuthn (publickey-credentials) works.
 	header {
-		Content-Security-Policy "default-src 'self'; connect-src 'self' https://api-production-507b.up.railway.app; img-src 'self' https://api-production-507b.up.railway.app data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+		Content-Security-Policy "default-src 'self'; connect-src 'self' https://api.os.princeuniverse.dev; img-src 'self' https://api.os.princeuniverse.dev data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "no-referrer"
 		X-Frame-Options "DENY"

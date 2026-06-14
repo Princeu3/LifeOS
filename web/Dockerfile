@@ -5,7 +5,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
 # Baked into the bundle at build time. Railway can override via a VITE_API_URL build arg/var.
-ARG VITE_API_URL=https://api-production-507b.up.railway.app
+ARG VITE_API_URL=https://api.os.princeuniverse.dev
 ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 

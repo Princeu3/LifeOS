@@ -14,7 +14,7 @@ LifeOS records the things most apps scatter across a dozen silos — sleep, food
 
 > ⚠️ **Early & building in public.** The architecture, decisions, and scaffold are in place; the domains are being built out. ⭐ Star/watch to follow along.
 >
-> 🔴 **Live demo:** **[lifeos web app →](https://web-production-168bf.up.railway.app)** · API + interactive docs: [`/docs`](https://api-production-507b.up.railway.app/docs)
+> 🔴 **Live demo:** **[lifeos web app →](https://os.princeuniverse.dev)** · API + interactive docs: [`/docs`](https://api.os.princeuniverse.dev/docs)
 
 ## ✨ What it tracks
 - 😴 **Sleep** · 🍳 **Nutrition & hydration** (+ caffeine/alcohol) · 🚿 **Skincare / hair / body care** with product + routine tracking and ingredient-conflict awareness

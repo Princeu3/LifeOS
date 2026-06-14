@@ -1,9 +1,10 @@
 # LifeOS — Deploy & Ops (Railway)
 
-## Live
-- **Web (PWA):** https://web-production-168bf.up.railway.app
-- **API + docs:** https://api-production-507b.up.railway.app (`/health`, `/timeline`, `/docs`)
+## Live (custom domains — primary)
+- **Web (PWA):** https://os.princeuniverse.dev  ·  passkey `rp_id` = `os.princeuniverse.dev`
+- **API + docs:** https://api.os.princeuniverse.dev (`/health`, `/timeline`, `/docs`)
 - **Repo:** https://github.com/Princeu3/LifeOS
+- Railway-generated fallbacks (still resolve): web `web-production-168bf.up.railway.app`, api `api-production-507b.up.railway.app`. CORS is locked to `FRONTEND_ORIGIN=https://os.princeuniverse.dev`, so the app only works on the custom web domain. Custom domains needed the workspace's paid plan; CLI/MCP `domain`/`list_services` return "Unauthorized" for this project, so manage domains via the **dashboard**.
 
 ## Railway IDs (project "LifeOS", personal workspace)
 - project `c2f15945-e339-40f2-af50-6a84d2ab2fce` · env (production) `4ef9dfd1-5c24-4a39-a955-5c833042e1d4`
