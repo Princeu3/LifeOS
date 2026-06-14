@@ -3,10 +3,13 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.concurrency import run_in_threadpool
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from .. import storage
 from ..auth import make_media_token, require_auth
+from ..config import settings
 from ..db import get_db
 from ..models import (
     BristolLog,
@@ -71,3 +74,30 @@ async def timeline_detail(event_id: uuid.UUID, db: AsyncSession = Depends(get_db
     if event.ref_table == "photos" and event.ref_id:
         detail.media_token = make_media_token(event.ref_id)
     return detail
+
+
+@router.delete("/{event_id}")
+async def delete_event(
+    event_id: uuid.UUID,
+    _: uuid.UUID = Depends(require_auth),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Delete an event + its normalized domain row (and the R2 object for photos)."""
+    event = await db.get(TimelineEvent, event_id)
+    if not event or event.user_id != OWNER_ID:
+        raise HTTPException(404, "event not found")
+    model = _TABLE_MODEL.get(event.ref_table or "")
+    if model and event.ref_id:
+        row = await db.get(model, event.ref_id)
+        if row is not None:
+            if event.ref_table == "photos" and getattr(row, "bucket_key", None):
+                try:
+                    await run_in_threadpool(
+                        storage._s3.delete_object, Bucket=settings.s3_bucket, Key=row.bucket_key
+                    )
+                except Exception:  # noqa: BLE001 — orphaned object is acceptable; still delete the row
+                    pass
+            await db.delete(row)
+    await db.delete(event)
+    await db.commit()
+    return {"deleted": True}

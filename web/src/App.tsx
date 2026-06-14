@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Auth from "./Auth";
 import PhotoComposer from "./PhotoComposer";
 import WithingsButton from "./Withings";
-import { enqueueCapture, fetchTimeline, photoImageUrl, syncQueue, type TimelineEntry } from "./lib/api";
+import { deleteEntry, enqueueCapture, fetchTimeline, photoImageUrl, syncQueue, type TimelineEntry } from "./lib/api";
 import { logout } from "./lib/auth";
 import { getToken } from "./lib/http";
 
@@ -131,6 +131,17 @@ export default function App() {
     }
   }
 
+  async function remove(id: string) {
+    if (!confirm("Delete this entry?")) return;
+    setOpen(null);
+    try {
+      await deleteEntry(id);
+      await qc.invalidateQueries({ queryKey: ["timeline"] });
+    } catch (err) {
+      alert(`Delete failed: ${(err as Error).message}`);
+    }
+  }
+
   const groups: Record<string, TimelineEntry[]> = {};
   for (const e of entries) (groups[dayLabel(e.occurred_at)] ??= []).push(e);
 
@@ -209,8 +220,8 @@ export default function App() {
                       className="overflow-hidden rounded-xl border border-neutral-800/70 bg-neutral-900/40"
                     >
                       <div
-                        className={`flex gap-3 p-3 ${pairs.length ? "cursor-pointer" : ""}`}
-                        onClick={() => pairs.length && setOpen(isOpen ? null : e.id)}
+                        className="flex cursor-pointer gap-3 p-3"
+                        onClick={() => setOpen(isOpen ? null : e.id)}
                       >
                         <div className="text-xl leading-none">{d.emoji}</div>
                         <div className="min-w-0 flex-1">
@@ -240,21 +251,29 @@ export default function App() {
                             </div>
                           )}
                         </div>
-                        {pairs.length > 0 && (
-                          <span className="select-none text-xs text-neutral-600">{isOpen ? "▲" : "▼"}</span>
-                        )}
+                        <span className="select-none text-xs text-neutral-600">{isOpen ? "▲" : "▼"}</span>
                       </div>
-                      {isOpen && pairs.length > 0 && (
-                        <dl className="border-t border-neutral-800/70 px-3 py-2 text-xs">
-                          {pairs.map(([k, v]) => (
-                            <div key={k} className="flex gap-2 py-0.5">
-                              <dt className="min-w-24 shrink-0 capitalize text-neutral-500">
-                                {k.replace(/_/g, " ")}
-                              </dt>
-                              <dd className="break-all text-neutral-300">{v}</dd>
-                            </div>
-                          ))}
-                        </dl>
+                      {isOpen && (
+                        <div className="border-t border-neutral-800/70 px-3 py-2">
+                          {pairs.length > 0 && (
+                            <dl className="text-xs">
+                              {pairs.map(([k, v]) => (
+                                <div key={k} className="flex gap-2 py-0.5">
+                                  <dt className="min-w-24 shrink-0 capitalize text-neutral-500">
+                                    {k.replace(/_/g, " ")}
+                                  </dt>
+                                  <dd className="break-all text-neutral-300">{v}</dd>
+                                </div>
+                              ))}
+                            </dl>
+                          )}
+                          <button
+                            onClick={() => void remove(e.id)}
+                            className="mt-2 text-xs text-red-400/80 hover:text-red-400"
+                          >
+                            Delete entry
+                          </button>
+                        </div>
                       )}
                     </li>
                   );

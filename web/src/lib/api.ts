@@ -66,6 +66,11 @@ export async function fetchTimeline(): Promise<TimelineEntry[]> {
   return r.json();
 }
 
+export async function deleteEntry(id: string): Promise<void> {
+  const r = await authedFetch(`/timeline/${id}`, { method: "DELETE" });
+  if (!r.ok) throw new Error(`delete ${r.status}`);
+}
+
 export const PHOTO_TYPES = ["face", "skin", "body", "nails", "hair"] as const;
 export type PhotoType = (typeof PHOTO_TYPES)[number];
 
