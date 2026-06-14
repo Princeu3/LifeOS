@@ -42,10 +42,12 @@ class Settings(BaseSettings):
     session_ttl_days: int = 7
     media_token_ttl_seconds: int = 900            # short-lived per-photo <img> token
 
-    # Withings
+    # Withings (body composition auto-sync — see docs/research/withings-api.md)
     withings_client_id: str | None = None
     withings_client_secret: str | None = None
-    withings_redirect_uri: str = "http://localhost:8000/withings/callback"
+    withings_redirect_uri: str | None = None  # must EXACTLY match the dev-app registration
+    withings_notify_secret: str | None = None  # query secret to validate incoming webhook POSTs
+    public_api_url: str = "https://api.os.princeuniverse.dev"  # public API base (redirect/callback URLs)
 
     @property
     def sqlalchemy_url(self) -> str:

@@ -14,7 +14,7 @@ import uuid
 from datetime import datetime
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import DateTime, Enum, Float, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import BigInteger, DateTime, Enum, Float, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -107,7 +107,9 @@ class BodyMetric(Base):
     """Synced from Withings (see docs/research/withings-api.md)."""
 
     __tablename__ = "body_metrics"
+    __table_args__ = (UniqueConstraint("grpid", name="uq_body_metrics_grpid"),)
     id: Mapped[uuid.UUID] = _pk()
+    grpid: Mapped[int | None] = mapped_column(BigInteger)  # Withings measure-group id (dedupe)
     measured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     weight_kg: Mapped[float | None] = mapped_column(Float)
     fat_pct: Mapped[float | None] = mapped_column(Float)
@@ -226,3 +228,18 @@ class AuthConfig(Base):
     webauthn_user_id: Mapped[str] = mapped_column(String(128))  # base64url 64-byte user handle
     recovery_code_hash: Mapped[str | None] = mapped_column(String(128))  # sha256 of high-entropy code
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class WithingsAccount(Base):
+    """Single Withings OAuth account (one owner). Tokens rotate — persist atomically on refresh."""
+
+    __tablename__ = "withings_account"
+    id: Mapped[uuid.UUID] = _pk()
+    userid: Mapped[str] = mapped_column(String(64), unique=True)
+    access_token: Mapped[str] = mapped_column(Text)
+    refresh_token: Mapped[str] = mapped_column(Text)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    scope: Mapped[str | None] = mapped_column(String(256))
+    last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

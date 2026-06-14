@@ -7,10 +7,7 @@ dependencies = [
   "procrastinate>=3.8",
   "psycopg[binary]>=3.2",
   "httpx>=0.27",
-  "sqlalchemy[asyncio]==2.0.50",
-  "pgvector==0.4.2",
-  "openai>=1.54",
-  "voyageai>=0.3",
-  "boto3>=1.35",
-  "cryptography>=43",
 ]
+
+[tool.uv]
+package = false  # worker.py is a script run via --app=worker.app, not an installable package

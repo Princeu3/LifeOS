@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import Auth from "./Auth";
 import PhotoComposer from "./PhotoComposer";
+import WithingsButton from "./Withings";
 import { enqueueCapture, fetchTimeline, photoImageUrl, syncQueue, type TimelineEntry } from "./lib/api";
 import { logout } from "./lib/auth";
 import { getToken } from "./lib/http";
@@ -108,15 +109,18 @@ export default function App() {
             <h1 className="text-2xl font-semibold tracking-tight">LifeOS</h1>
             <p className="text-sm text-neutral-400">Log anything — AI files it onto your timeline.</p>
           </div>
-          <button
-            onClick={() => {
-              logout();
-              setAuthed(false);
-            }}
-            className="text-xs text-neutral-500 hover:text-neutral-300"
-          >
-            Lock
-          </button>
+          <div className="flex items-center gap-3">
+            <WithingsButton />
+            <button
+              onClick={() => {
+                logout();
+                setAuthed(false);
+              }}
+              className="text-xs text-neutral-500 hover:text-neutral-300"
+            >
+              Lock
+            </button>
+          </div>
         </header>
 
         <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-3 focus-within:border-neutral-700">

@@ -31,7 +31,15 @@ railway up ./web --path-as-root --service web --ci    # builds web/Dockerfile (C
 ## Migrations
 The api Dockerfile CMD runs `alembic upgrade head` on start (idempotent). To run locally against Railway PG: `cd api && uv run alembic upgrade head` (uses public proxy URL in `.env`).
 
-## Worker (not deployed yet)
-Deploy when its jobs exist: `railway add --service worker` + `railway up ./worker --path-as-root --service worker`, start command `procrastinate --app=worker.app worker`, set `PROCRASTINATE_DSN=${{Postgres.DATABASE_URL}}`.
+## Worker (Procrastinate — DEPLOYED)
+`railway up ./worker --path-as-root --service worker --ci`. The worker Dockerfile CMD runs
+`procrastinate --app=worker.app schema --apply || true` (apply errors if already applied — the
+`|| true` makes redeploys safe) then `procrastinate --app=worker.app worker`. Env: `PROCRASTINATE_DSN`
++ `DATABASE_URL` = `${{Postgres.DATABASE_URL}}` (private net), `WITHINGS_CLIENT_ID/SECRET`.
+The **API** also needs `PROCRASTINATE_DSN` (it opens the pool in lifespan to defer jobs) +
+`PUBLIC_API_URL`, `WITHINGS_REDIRECT_URI` (= `https://api.os.princeuniverse.dev/withings/callback`,
+must match the dev-app registration), `WITHINGS_NOTIFY_SECRET`, `WITHINGS_CLIENT_ID/SECRET`.
+Withings dev app: register at developer.withings.com, set the redirect URI above; the Notify
+callback is `https://api.os.princeuniverse.dev/withings/notify?s=<WITHINGS_NOTIFY_SECRET>`.
 
 ## ⚠️ Rotate the dev API keys (OpenRouter/Voyage/ElevenLabs/R2) — they were pasted in chat during setup.
